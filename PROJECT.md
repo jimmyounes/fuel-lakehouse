@@ -46,6 +46,7 @@ Living document. Context, decisions and open questions, so the project can be pi
 ## Step log
 
 - 2026-11-11, step 0 done: SparkSession with Delta starts, writes and reads a Delta table (`scripts/smoke_test.py`).
+- 2026-11-11, step 1 done: config.yaml, src/utils.py (load_config, setup_logging, get_spark), requirements.txt. Session starts from the config.
 
 ## Roadmap
 

@@ -1,0 +1,5 @@
+# Pinned pair, see PROJECT.md. Install with: uv pip install -r requirements.txt
+pyspark==3.5.9
+delta-spark==3.3.3
+pyyaml==6.0.2
+pytest==8.3.4

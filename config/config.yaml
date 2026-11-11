@@ -1,0 +1,28 @@
+# fuel-lakehouse configuration.
+# Everything the code needs to know about *where* and *how* lives here, never in the code.
+# Phase 3 will swap the local paths for object storage URIs (s3://..., abfss://...) without touching src/.
+
+project: fuel-lakehouse
+
+paths:
+  raw: data/raw          # downloaded zip/xml files, as received
+  bronze: data/bronze    # Delta, raw rows
+  silver: data/silver    # Delta, clean tables
+  gold: data/gold        # Delta, business aggregates
+
+source:
+  daily_url: https://donnees.roulez-eco.fr/opendata/jour
+  instant_url: https://donnees.roulez-eco.fr/opendata/instantane
+  yearly_url: https://donnees.roulez-eco.fr/opendata/annee/{year}
+  encoding: ISO-8859-1
+
+spark:
+  app_name: fuel-lakehouse
+  master: local[*]           # all cores of this machine; a cluster URL in Phase 3
+  driver_memory: 4g          # the single driver JVM; raise it for the yearly backfill
+  shuffle_partitions: 8      # Spark's default is 200, sized for clusters, not for a laptop
+  extra_packages: []         # Maven coordinates loaded into the JVM (spark-xml arrives at step 2)
+  java_home: /opt/homebrew/opt/openjdk@17   # local convenience only; ignored if JAVA_HOME is already set
+
+logging:
+  level: INFO

@@ -31,7 +31,9 @@ Living document. Context, decisions and open questions, so the project can be pi
 ## Technical decisions
 
 - Architecture: Medallion (Bronze / Silver / Gold) on Delta Lake, PySpark, Python 3.11.
-- Spark version: to decide at step 0. Spark 3.5 + delta-spark 3.x is the stable pair but needs the `spark-xml` package for XML. Spark 4.0 + delta-spark 4.0 reads XML natively. Trade-off: stability versus native XML.
+- Spark version (decided 2026-11-11): pyspark 3.5.9 + delta-spark 3.3.3 + Java 17 (Homebrew openjdk@17). The pair most companies run; XML will be read through the `spark-xml` package. Spark 4.0 reads XML natively but has fewer tutorials and less production adoption.
+- Python environment: managed with `uv` (standalone CPython 3.11). Reason: the Homebrew Python 3.11 and 3.14 builds on this Mac ship a `pyexpat` linked against a newer system libexpat than macOS 26.2 provides, which breaks `plistlib`, `platform.mac_ver()` and therefore `pip` inside a classic venv. uv's standalone Python embeds its own libexpat.
+- `JAVA_HOME=/opt/homebrew/opt/openjdk@17` must be set: the `java` on PATH is an Apple stub.
 - Config externalized in `config/config.yaml`. Logging via `logging`, no print.
 - Bronze is append-only and never deleted: it is the system of record for the history we build.
 
@@ -40,6 +42,10 @@ Living document. Context, decisions and open questions, so the project can be pi
 - Brand attribution: regex on address/name, or join with OpenStreetMap `amenity=fuel` nodes (which carry `brand`)?
 - Crude oil reference series for pass-through analysis: which free source (e.g. EIA Brent daily)?
 - Cloud provider: Phase 3.
+
+## Step log
+
+- 2026-11-11, step 0 done: SparkSession with Delta starts, writes and reads a Delta table (`scripts/smoke_test.py`).
 
 ## Roadmap
 

@@ -1,0 +1,14 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Local data (bronze/silver/gold, downloaded feeds): never committed
+data/
+
+# Spark / tooling
+spark-warehouse/
+derby.log
+metastore_db/
+.pytest_cache/
+.DS_Store

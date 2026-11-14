@@ -23,6 +23,7 @@ Living document. Context, decisions and open questions, so the project can be pi
 
 - Feeds: instant (10 min), daily (J-1), yearly archives 2007 → today. Zip of one XML, ISO-8859-1.
 - Daily file: 9,947 stations, 30,275 current prices, 14 MB. Yearly 2025: 14,420 stations, 5.3 M price updates, 386 MB.
+- The current-year archive (`annee/2026`) is refreshed daily (verified 2026-11-14: latest update 2026-11-13T23:59, 4.76 M events). No gap between the yearly backfill and the daily feed.
 - Daily file is a snapshot of current prices with `maj` = last update timestamp. The yearly archive contains every update. Hence: backfill from archives, then daily MERGE on (station_id, fuel_id, maj).
 - Coordinates are stored as integers multiplied by 100,000.
 - No brand in the feed. Brand must be inferred or joined from an external source (decision pending).

@@ -9,6 +9,8 @@ Measured on the daily file of 2026-11-10 and the yearly archive 2025. All three 
 | Daily 2026-11-10 | 9,954 | 30,870 | 27,421 | 69 | 14 MB |
 | Yearly 2025 | 14,420 | 5,297,800 | 62,745 | 14,401 | 386 MB |
 
+**The current-year archive is live.** `annee/2026` downloaded on 2026-11-14 contained 4,757,835 price updates with the latest at 2026-11-13T23:59: the archive of the running year is refreshed daily, not published once in January. There is therefore no gap between the last complete year and today.
+
 The daily and instant files are **snapshots**: one `prix` per station and fuel, the current price with the timestamp of its last update. The yearly archive is an **event log**: every price update of the year (about 440,000 per month in 2025). Stations that closed during the year are still present, which is why the yearly file has more stations than the daily one.
 
 ## Station (`pdv` attributes)

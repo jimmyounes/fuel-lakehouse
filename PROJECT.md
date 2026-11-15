@@ -38,6 +38,9 @@ Living document. Context, decisions and open questions, so the project can be pi
 - Config externalized in `config/config.yaml`. Logging via `logging`, no print.
 - Bronze is append-only and never deleted: it is the system of record for the history we build.
 
+- Bronze schema (decided 2026-11-15): every field a string, nested structure kept, no `_VALUE`. Reason: `_cp` inferred as long loses the leading zero (01000 -> 1000); strings cannot fail conversion silently. Typing happens in Silver.
+- spark-xml + nested schema pruning: when the optimizer prunes the XML schema, spark-xml drops nested elements silently (half the stations lost their prices in a multi-column count). Mitigation: Bronze reads and writes every column with no projection in between, `spark.sql.optimizer.nestedSchemaPruning.enabled=false` in the session, and a reconciliation check (exploded `prix` count == `<prix` tags in the raw file).
+
 ## Open questions
 
 - Brand attribution: regex on address/name, or join with OpenStreetMap `amenity=fuel` nodes (which carry `brand`)?
@@ -48,6 +51,7 @@ Living document. Context, decisions and open questions, so the project can be pi
 
 - 2026-11-11, step 0 done: SparkSession with Delta starts, writes and reads a Delta table (`scripts/smoke_test.py`).
 - 2026-11-11, step 1 done: config.yaml, src/utils.py (load_config, setup_logging, get_spark), requirements.txt. Session starts from the config.
+- 2026-11-15, step 2 done: `src/download.py` (feeds -> raw, idempotent) and `src/ingestion.py` (XML -> Bronze `pdv_raw`, explicit all-string schema, nested arrays kept, partition source_type/snapshot_date, skip if source_file already ingested). Reconciled with the raw file: 9,953 stations, 31,691 prices, 26,420 shortages, 63,039 services.
 
 ## Roadmap
 

@@ -21,8 +21,16 @@ spark:
   master: local[*]           # all cores of this machine; a cluster URL in Phase 3
   driver_memory: 4g          # the single driver JVM; raise it for the yearly backfill
   shuffle_partitions: 8      # Spark's default is 200, sized for clusters, not for a laptop
-  extra_packages: []         # Maven coordinates loaded into the JVM (spark-xml arrives at step 2)
+  extra_packages:            # Maven coordinates loaded into the JVM at startup, like Delta itself
+    - com.databricks:spark-xml_2.12:0.18.0   # XML reader; _2.12 = Scala version of pyspark 3.5
   java_home: /opt/homebrew/opt/openjdk@17   # local convenience only; ignored if JAVA_HOME is already set
+  extra_conf:                # any spark.* setting, applied as-is to the session
+    # spark-xml mis-parses nested tags when the optimizer hands it a pruned schema
+    # (verified 2026-11-15: half the stations lost their prices). Bronze reads everything anyway.
+    spark.sql.optimizer.nestedSchemaPruning.enabled: "false"
+
+tables:
+  bronze_pdv: pdv_raw        # one row per station per source file, nested arrays kept
 
 logging:
   level: INFO

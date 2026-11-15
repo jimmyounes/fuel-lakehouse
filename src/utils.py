@@ -67,6 +67,8 @@ def get_spark(cfg: dict | None = None) -> SparkSession:
         .config("spark.driver.memory", s["driver_memory"])
         .config("spark.sql.shuffle.partitions", s["shuffle_partitions"])
     )
+    for key, value in (s.get("extra_conf") or {}).items():
+        builder = builder.config(key, value)
     # Adds the Delta JAR (and any extra Maven package) to the JVM classpath.
     spark = configure_spark_with_delta_pip(builder, extra_packages=s.get("extra_packages") or []).getOrCreate()
     # Spark's own logs are very chatty at INFO; our pipeline logs stay at the configured level.

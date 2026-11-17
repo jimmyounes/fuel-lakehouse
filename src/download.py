@@ -8,7 +8,7 @@ import argparse
 import logging
 import re
 import zipfile
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from io import BytesIO
 from pathlib import Path
 from urllib.request import Request, urlopen
@@ -18,7 +18,7 @@ from src.utils import load_config, setup_logging
 log = logging.getLogger(__name__)
 
 # How the server names its files, e.g. PrixCarburants_quotidien_20261113.zip
-_DATE_IN_NAME = re.compile(r"_(\d{8})\.")
+_DATE_IN_NAME = re.compile(r"_(\d{8})[._]")
 _YEAR_IN_NAME = re.compile(r"_annuel_(\d{4})\.")
 
 
@@ -32,8 +32,9 @@ def _fetch(url: str) -> bytes:
 def snapshot_date_from_filename(name: str) -> date:
     """The date a file describes, read from its name.
 
-    Daily files carry YYYYMMDD, yearly files carry the year (we use Dec 31),
-    instant files carry nothing (we use today).
+    Daily files carry YYYYMMDD. A past yearly archive carries its year (we use Dec 31).
+    The running-year archive carries its as-of date (_asof_YYYYMMDD).
+    Instant files carry YYYYMMDD_HHMM.
     """
     if m := _DATE_IN_NAME.search(name):
         return datetime.strptime(m.group(1), "%Y%m%d").date()
@@ -59,11 +60,20 @@ def download_feed(cfg: dict, source_type: str, year: int | None = None) -> Path:
     target_dir.mkdir(parents=True, exist_ok=True)
 
     # Yearly archives have a predictable name: skip the 30+ MB download if we have it.
+    # The archive of the running year is refreshed every day by the source, so each
+    # download is a different file: we stamp it with its as-of date.
+    yearly_name = None
     if source_type == "yearly":
-        expected = target_dir / f"PrixCarburants_annuel_{year}.xml"
-        if expected.exists():
-            log.info("Already present, skipping: %s", expected.name)
-            return expected
+        today = date.today()
+        if year == today.year:
+            # Like the daily feed, the running-year archive holds data up to yesterday.
+            as_of = today - timedelta(days=1)
+            yearly_name = f"PrixCarburants_annuel_{year}_asof_{as_of:%Y%m%d}.xml"
+        else:
+            yearly_name = f"PrixCarburants_annuel_{year}.xml"
+        if (target_dir / yearly_name).exists():
+            log.info("Already present, skipping: %s", yearly_name)
+            return target_dir / yearly_name
 
     log.info("Downloading %s feed from %s", source_type, url)
     payload = _fetch(url)
@@ -80,6 +90,8 @@ def download_feed(cfg: dict, source_type: str, year: int | None = None) -> Path:
         if source_type == "instant":
             stamp = datetime.now().strftime("%Y%m%d_%H%M")
             xml_name = f"PrixCarburants_instantane_{stamp}.xml"
+        if yearly_name:
+            xml_name = yearly_name
 
         xml_path = target_dir / xml_name
         if xml_path.exists():

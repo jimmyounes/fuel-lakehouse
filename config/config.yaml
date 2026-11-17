@@ -28,9 +28,32 @@ spark:
     # spark-xml mis-parses nested tags when the optimizer hands it a pruned schema
     # (verified 2026-11-15: half the stations lost their prices). Bronze reads everything anyway.
     spark.sql.optimizer.nestedSchemaPruning.enabled: "false"
+    # Feed timestamps are French local time with no offset: pin the session so a server in UTC reads them the same.
+    spark.sql.session.timeZone: Europe/Paris
+    spark.sql.debug.maxToStringFields: "200"   # our nested schema is wide; avoids a noisy truncation warning
+    # The feed contains typos such as a shortage starting in year 0216. Parquet refuses to write
+    # dates before 1900 unless told which calendar to use. We keep the value as-is and flag it in Silver.
+    spark.sql.parquet.datetimeRebaseModeInWrite: CORRECTED
+    spark.sql.parquet.int96RebaseModeInWrite: CORRECTED
+    spark.sql.parquet.datetimeRebaseModeInRead: CORRECTED
+    spark.sql.parquet.int96RebaseModeInRead: CORRECTED
 
 tables:
   bronze_pdv: pdv_raw        # one row per station per source file, nested arrays kept
+  silver:
+    price_events: price_events          # one row per price update          (insert-only MERGE)
+    shortages: shortages                # one row per shortage              (insert + update MERGE)
+    closures: closures                  # one row per station closure       (insert + update MERGE)
+    stations: stations                  # one row per station, current state (insert + update MERGE)
+    station_services: station_services  # station x service, current state  (replaced, forward in time only)
+    station_hours: station_hours        # station x weekday x slot, current state
+    processed_files: _processed_files   # ledger: which Bronze files Silver has already absorbed
+
+quality:
+  # Physically implausible prices are flagged in Silver, never dropped.
+  # Statistical outliers (vs the day's distribution) are a Gold concern.
+  price_min: 0.2
+  price_max: 5.0
 
 logging:
   level: INFO

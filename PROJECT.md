@@ -41,7 +41,17 @@ Living document. Context, decisions and open questions, so the project can be pi
 - Bronze schema (decided 2026-11-15): every field a string, nested structure kept, no `_VALUE`. Reason: `_cp` inferred as long loses the leading zero (01000 -> 1000); strings cannot fail conversion silently. Typing happens in Silver.
 - spark-xml + nested schema pruning: when the optimizer prunes the XML schema, spark-xml drops nested elements silently (half the stations lost their prices in a multi-column count). Mitigation: Bronze reads and writes every column with no projection in between, `spark.sql.optimizer.nestedSchemaPruning.enabled=false` in the session, and a reconciliation check (exploded `prix` count == `<prix` tags in the raw file).
 
+- Price unit (found 2026-11-17): archives before ~2022 store thousandths of a euro (`valeur="1141"`), recent files store euros (`"2.17"`). Silver divides by 1000 when the raw value exceeds 50. Old archives also use `maj="2007-01-04 18:43:38.841521"` (space, microseconds) and have no `type` on `rupture`.
+- Ancient dates: the feed contains typos (a shortage starting in year 0216) and a 1970-01-01 sentinel for "start unknown". Kept as-is, flagged with `has_unknown_start`; Parquet rebase mode set to CORRECTED so they can be written.
+- Ended shortages appear in the daily feed only on the day they end. A missed day leaves them open forever unless the running-year archive is merged: the weekly reconciliation is required, not optional.
+- State tables (stations attributes, services, hours) only move forward in time: an older snapshot never overwrites a newer state, it only adds stations not known yet.
+- Running-year archive is stamped `_asof_<yesterday>`: like the daily feed it holds data up to J-1.
+- Silver ledger `_processed_files`: a daily run reads only the new Bronze file. `--force` reprocesses everything and must change nothing.
+- Session timezone pinned to Europe/Paris: feed timestamps are local time without offset.
+
 ## Open questions
+
+- `price_events` has near-empty year partitions (stale prices from 2009-2021 seen in the daily feed). They fill up with the backfill; revisit file sizes at step 6 (OPTIMIZE).
 
 - Brand attribution: regex on address/name, or join with OpenStreetMap `amenity=fuel` nodes (which carry `brand`)?
 - Crude oil reference series for pass-through analysis: which free source (e.g. EIA Brent daily)?
@@ -52,6 +62,8 @@ Living document. Context, decisions and open questions, so the project can be pi
 - 2026-11-11, step 0 done: SparkSession with Delta starts, writes and reads a Delta table (`scripts/smoke_test.py`).
 - 2026-11-11, step 1 done: config.yaml, src/utils.py (load_config, setup_logging, get_spark), requirements.txt. Session starts from the config.
 - 2026-11-15, step 2 done: `src/download.py` (feeds -> raw, idempotent) and `src/ingestion.py` (XML -> Bronze `pdv_raw`, explicit all-string schema, nested arrays kept, partition source_type/snapshot_date, skip if source_file already ingested). Reconciled with the raw file: 9,953 stations, 31,691 prices, 26,420 shortages, 63,039 services.
+
+- 2026-11-17, step 3 done: `src/transform_silver.py`. Six Silver tables (price_events, shortages, closures, stations, station_services, station_hours), pure transformations + MERGE writers, ledger of processed Bronze files. Verified: forced reprocess of a file = 0 inserted / 0 updated (no Delta commit written); second daily = 15,128 new price events only; 2026 archive (372 MB) = 4.76 M events merged in about 15 s; the daily of Nov 16 processed after the archive inserted 0 rows (every daily price exists in the archive: the sources converge). 4,790,090 price events, 0 duplicate key in any table.
 
 ## Roadmap
 
